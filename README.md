@@ -1,4 +1,4 @@
-# A steam overlay ticker controlled by Discord
+# A stream overlay ticker controlled by Discord
 
 This project has two portions, the webpage (ticker overlay) and the Discord bot.
 
