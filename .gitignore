@@ -1,0 +1,13 @@
+**/bin
+**/obj
+res/font
+**/*.lnk
+ticker-bot/notes.txt
+**token
+
+# VS Code
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json

@@ -1,0 +1,50 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "build",
+            "type": "shell",
+            "linux": {
+                "command": "echo Build not supported on Linux."
+            },
+            "osx": {
+                "command": "echo Build not supported on OSX."
+            },
+            "windows": {
+                "command": "script\\win\\build"
+            },
+            "problemMatcher": "$msCompile",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        
+        {
+            "label": "publish",
+            "command": "dotnet",
+            "type": "shell",
+            "linux":{
+                "command": "echo Build not yet supported on Linux.",
+            },
+            "osx": {
+                "command": "echo Build not yet supported on OSX."
+            },
+            "windows": {
+                "command": "script\\win\\publish"
+                /*
+                "command": "start /wait dotnet",                
+                "args":[
+                    "--self-contained",
+                    "-o",
+                    "${workspaceFolder}..\\bin\\",
+                    "&&",
+                    "copy /Y ${workspaceFolder}\\token ${workspaceFolder}\\..\\bin"
+                ]
+                */
+            },
+            "problemMatcher": "$msCompile",
+            "group": "build"
+        }
+    ]
+}

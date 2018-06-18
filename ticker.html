@@ -1,0 +1,299 @@
+<html>
+<head>
+<meta charset="utf-8">
+<title>Twitchcord Ticker</title>
+<style>
+    :root {
+        --left-translate: translateX(0px);
+        --scroll-speed: 1200ms;
+        --transitionFadeOutInit: translate(0px,0px);
+        --transitionFadeOutEnd: translate(0px,0px);
+        --transitionFadeInInit: translate(0px,0px);
+        --transitionFadeInEnd: translate(0px,0px);
+    }
+
+    @font-face {
+    font-family: 'Helvetica Neue Lt Std';
+    src: url('res/font/HelveticaLTStd-Roman.otf');
+    }
+
+    /* @-moz-keyframes scroll-left {
+        0%   { -moz-transform: translateX(100%); }
+        100% { -moz-transform: translateX(-100%); }
+    }
+
+    @-webkit-keyframes scroll-left {
+        0%   { -webkit-transform: translateX(100%); }
+        100% { -webkit-transform: var(--left-translate); }
+    } */
+
+    /* see if there's a way to fiddle with the percentages in javascript as well... it won't be easy */
+    @keyframes scroll-left {
+        0%, 30%   { 
+            -moz-transform: translateX(0%);
+            -webkit-transform: translateX(0%);
+            transform: translateX(0%); 		
+        }
+
+        70%, 100% { 
+            -moz-transform: var(--left-translate);
+            -webkit-transform: var(--left-translate);
+            transform: var(--left-translate); 
+        }
+     }
+
+     /* TODO: Implement these */
+     @keyframes scroll-left-delay-short {
+        0%, 17%   { 
+            -moz-transform: translateX(0%);
+            -webkit-transform: translateX(0%);
+            transform: translateX(0%); 		
+        }
+
+        83%, 100% { 
+            -moz-transform: var(--left-translate);
+            -webkit-transform: var(--left-translate);
+            transform: var(--left-translate); 
+        }
+     }
+
+     @keyframes scroll-left-delay-medium {
+        0%, 25%   { 
+            -moz-transform: translateX(0%);
+            -webkit-transform: translateX(0%);
+            transform: translateX(0%); 		
+        }
+
+        75%, 100% { 
+            -moz-transform: var(--left-translate);
+            -webkit-transform: var(--left-translate);
+            transform: var(--left-translate); 
+        }
+     }
+
+     @keyframes scroll-left-delay-long {
+        0%, 30%   { 
+            -moz-transform: translateX(0%);
+            -webkit-transform: translateX(0%);
+            transform: translateX(0%); 		
+        }
+
+        70%, 100% { 
+            -moz-transform: var(--left-translate);
+            -webkit-transform: var(--left-translate);
+            transform: var(--left-translate); 
+        }
+     }
+
+     @keyframes ticker-fadeout {
+         0% {
+            opacity: 1;
+            transform: var(--transitionFadeOutInit);
+         }
+
+         100% {
+            opacity: 0;
+            transform: var(--transitionFadeOutEnd);            
+         }
+     }
+
+     @keyframes ticker-fadein {
+         0% {
+            opacity: 0;
+            transform: var(--transitionFadeInInit);
+         }
+
+         100% {
+            opacity: 1;
+            transform: var(--transitionFadeInEnd);         
+         }
+     }
+
+    body {
+        /* background-color: #011620; */
+        background-image: url('res/bg-med.png');
+        background-repeat: repeat;
+        font-size: 14px;
+    }
+
+    .container {
+        margin-left: 3.5%;
+        margin-right: 3.5%;
+    }
+
+    .btn {
+        background: #113a4e;
+        background-image: -webkit-linear-gradient(top, #113a4e, #011620);
+        background-image: -moz-linear-gradient(top, #113a4e, #011620);
+        background-image: -ms-linear-gradient(top, #113a4e, #011620);
+        background-image: -o-linear-gradient(top, #113a4e, #011620);
+        background-image: linear-gradient(to bottom, #113a4e, #011620);
+        font-family: Arial;
+        color: whitesmoke;
+        font-size: 18px;
+        padding: 10px 20px 10px 20px;
+        /* margin: 40px 20px 0px 20px; */
+        margin-left: 15px;
+        text-decoration: none;
+        /* position: absolute; */
+        display: inline-block;
+        vertical-align: middle;
+        line-height: normal;
+    }
+
+    .btn:hover {
+        background: #1b5570;
+        background-image: -webkit-linear-gradient(top, #1b5570, #08384f);
+        background-image: -moz-linear-gradient(top, #1b5570, #08384f);
+        background-image: -ms-linear-gradient(top, #1b5570, #08384f);
+        background-image: -o-linear-gradient(top, #1b5570, #08384f);
+        background-image: linear-gradient(to bottom, #1b5570, #08384f);
+        text-decoration: none;
+    }
+
+    textarea {
+        background: #1b5570;
+        outline: none;
+        resize: none;
+        font-size: 14pt;
+        font-family: 'Helvetica Neue LT Std', Helvetica, Arial, sans-serif;
+        border: none;
+        padding: 3px;
+    }
+
+    #controls {
+        color: whitesmoke;
+        font-family: Arial, sans-serif;
+        font-weight: bold;
+        display: table;
+    }
+
+    #controls a {
+        display: table-cell;
+    }
+
+    #ticker {
+        /* background-color: #010c12; */
+        background-image: url('res/bg-dark.png');
+        background-repeat: repeat;
+
+        margin: 10% 0 5% 0;
+        border: 2px #113a4e solid;
+        -webkit-box-shadow: 0px 15px 11px 0px rgba(1,12,18,1);
+        -moz-box-shadow: 0px 15px 11px 0px rgba(1,12,18,1);
+        box-shadow: 0px 15px 11px 0px rgba(1,12,18,1);
+    }
+
+    #ticker-txt {
+        margin: 0px 30px 0px 30px;
+        overflow: hidden;
+        white-space: nowrap;
+        color: whitesmoke;
+        font-family: 'Helvetica Neue LT Std', Helvetica, Arial, sans-serif;
+        font-size: 3em;
+        font-weight: bold;
+    }
+
+    #hidden {
+        display: none;
+        margin: 0px 30px 0px 30px;
+        white-space: nowrap;
+        color: whitesmoke;
+        font-family: 'Helvetica Neue LT Std', Helvetica, Arial, sans-serif;
+        font-size: 3em;
+        font-weight: bold;
+    }
+
+    /* #ticker-txt p {
+        -moz-animation: scroll-left var(--scroll-speed) infinite linear forwards;
+        -webkit-animation: scroll-left var(--scroll-speed) infinite linear forwards;
+        animation: scroll-left var(--scroll-speed) infinite linear forwards;
+    } */
+
+    .ticker-scroll {
+        -moz-animation: scroll-left var(--scroll-speed) infinite linear forwards;
+        -webkit-animation: scroll-left var(--scroll-speed) infinite linear forwards;
+        animation: scroll-left var(--scroll-speed) infinite linear forwards;
+    }
+
+    .ticker-scroll-delay-short {
+        -moz-animation: scroll-left-delay-short var(--scroll-speed) infinite linear forwards;
+        -webkit-animation: scroll-left-delay-short var(--scroll-speed) infinite linear forwards;
+        animation: scroll-left-delay-short var(--scroll-speed) infinite linear forwards;
+    }
+
+    .ticker-scroll-delay-medium {
+        -moz-animation: scroll-left-delay-medium var(--scroll-speed) infinite linear forwards;
+        -webkit-animation: scroll-left-delay-medium var(--scroll-speed) infinite linear forwards;
+        animation: scroll-left-delay-medium var(--scroll-speed) infinite linear forwards;
+    }
+
+    .ticker-scroll-delay-long {
+        -moz-animation: scroll-left-delay-long var(--scroll-speed) infinite linear forwards;
+        -webkit-animation: scroll-left-delay-long var(--scroll-speed) infinite linear forwards;
+        animation: scroll-left-delay-long var(--scroll-speed) infinite linear forwards;
+    }
+
+    .fadeout {
+        animation: ticker-fadeout 500ms 1 ease-out alternate forwards;
+    }
+
+    .fadein {
+        animation: ticker-fadein 500ms 1 ease-out alternate forwards;
+    }
+
+</style>
+<script src="js/filter.js"></script>
+<script src="js/script.js"></script>
+</head>
+
+<body>
+    <div class="container">
+        <div id="ticker">
+            <div class="freeze" id="ticker-txt">
+                <p class="ticker-scroll">
+                    The ticker encountered an error, or Javascript is not enabled.
+                </p>
+            </div>
+        </div>
+        <div id="controls">
+            <textarea id="message" rows="3" cols="28" >Enter a message here to manually update the ticker.</textarea>
+            <a class="btn" id="btnUpdate" href="#">Update</a>
+            <!-- <a class="btn" id="btnTickerFadeout" href="#">Fade out</a> -->
+            <!-- <a class="btn" id="btnTickerFadein" href="#">Fade in</a> -->
+        </div>
+        <!-- <div id="hidden">
+            <p class="ticker-scroll"></p>
+        </div> -->
+    </div>
+    <script type="text/javascript">
+        document.addEventListener("DOMContentLoaded", setup);
+        document.getElementById("btnUpdate").addEventListener("click",
+            function() {
+                let newMsg = document.getElementById("message").value;
+                setTickerAnim(newMsg, true);
+            }
+        );
+        // document.getElementById("btnTickerFadeout").addEventListener("click",
+        //     function() {
+        //         let txt = document.querySelector("#ticker-txt > p")
+        //         let matrix = parseMatrix(getComputedStyle(txt).transform);
+        //         const xOffset = matrix.translateX;
+        //         txt.style.setProperty("--transitionFadeOutInit", "translate("+xOffset+"px,0px)");
+        //         txt.style.setProperty("--transitionFadeOutEnd", "translate("+xOffset+"px,"+_transitionFadePx+"px)");
+        //         txt.classList.add("fadeout");
+        //     }
+        // );
+        // document.getElementById("btnTickerFadein").addEventListener("click",
+        //     function() {
+        //         let txt = document.querySelector("#ticker-txt > p")
+        //         txt.classList.remove("fadeout");
+        //         txt.style.setProperty("--transitionFadeInInit", "translate(0px,-"+_transitionFadePx+"px)");
+        //         txt.style.setProperty("--transitionFadeInEnd", "translate(0px,0px)");
+        //         txt.classList.add("fadein");
+        //         window.setTimeout(function(){txt.classList.remove("fadein")}, _transitionFadeMs);
+        //     }
+        // );
+    </script>
+</body>
+</html>
