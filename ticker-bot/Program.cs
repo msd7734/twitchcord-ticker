@@ -27,7 +27,10 @@ namespace TwitchTicker
         private static object _lock = new object();
 
         private static String ReadToken() {
-            return File.ReadAllText("token");
+            string tokenPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "token");
+            Console.WriteLine(tokenPath);
+            Console.ReadKey();
+            return File.ReadAllText(tokenPath).Trim();
         }
 
         public static void Main(string[] args)
