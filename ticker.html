@@ -258,7 +258,7 @@
         <div id="controls">
             <textarea id="message" rows="3" cols="28" >Enter a message here to manually update the ticker.</textarea>
             <a class="btn" id="btnUpdate" href="#">Update</a>
-            <a class="btn" id="btnRecalcAnim" href="#">Recalculate Animation</a>
+            <!-- <a class="btn" id="btnRecalcAnim" href="#">Recalculate Animation</a> -->
             <!-- <a class="btn" id="btnTickerFadeout" href="#">Fade out</a> -->
             <!-- <a class="btn" id="btnTickerFadein" href="#">Fade in</a> -->
         </div>
@@ -274,6 +274,7 @@
                 updateTicker(newMsg, true);
             }
         );
+        window.addEventListener("resize", handleResize);
         // document.getElementById("btnRecalcAnim").addEventListener("click",
         //     function() {
         //         setAnim(getTickerElem());

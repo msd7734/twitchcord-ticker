@@ -397,6 +397,19 @@ function updateTicker(newText, playTransition) {
     }
 }
 
+function handleResize() {
+    if (!_resizing) {
+        var _resizing = true;
+        window.requestAnimationFrame(
+            function() {
+                setAnim(getTickerElem());
+                console.log("Reset animation due to window resize.");
+                _resizing = false;
+            }
+        )
+    }
+}
+
 function getTickerElem() {
     // Return the real ticker, not the hidden dummy
     return document.querySelector("#ticker-txt > p");
