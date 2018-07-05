@@ -251,7 +251,6 @@ function getTickerTextWidth() {
 }
 
 function getTickerWidth() {
-    // this may be causing some gaps occasionally, do we need to round?
     return Math.ceil(document.getElementById("ticker").getBoundingClientRect().width);
 }
 
@@ -314,10 +313,13 @@ function getScrollSpeed(givenSize) {
     // givenSize is some factor of the ticker and text size to determine how fast to scroll
     let speed = _minScrollSpeedMs + (givenSize * _scrollSpeedStepMs);
     speed = clamp(speed, _minScrollSpeedMs, _maxScrollSpeedMs);
-    // return calcRealTranslateTime(speed);
     return speed;
 }
 
+/*
+    Set up all variables and CSS rules for the target (ticker) given the current
+    state of the page. Text should be updated before calling this function.
+*/
 function setAnim(target) {
     // set up the new x-offset target to scroll to
     const xTargetOffset = getAnimXOffset();
@@ -411,19 +413,7 @@ function handleResize() {
 }
 
 function getTickerElem() {
-    // Return the real ticker, not the hidden dummy
     return document.querySelector("#ticker-txt > p");
-}
-
-function getHiddenTickerElem() {
-    // Using a hidden element that doesn't move or get cut off
-    // May be useful for debugging
-    return document.querySelector("#hidden > p");
-}
-
-// For setting hidden text element. Useful for debugging.
-function updateHiddenText(newText) {
-    getHiddenTickerElem().innerText = newText;
 }
 
 Array.prototype.enqueue = function(item) {
