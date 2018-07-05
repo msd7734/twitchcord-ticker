@@ -318,12 +318,7 @@ function getScrollSpeed(givenSize) {
     return speed;
 }
 
-function fadeCallback(target, newText) {
-    target.classList.remove("fadeout");
-
-    // set text
-    target.innerText = newText ? newText : _defaultMsg;
-
+function setAnim(target) {
     // set up the new x-offset target to scroll to
     const xTargetOffset = getAnimXOffset();
     target.style.setProperty("--left-translate", "translateX("+xTargetOffset+"px)");
@@ -353,6 +348,15 @@ function fadeCallback(target, newText) {
 
     target.style.setProperty("--scroll-speed", realSpeed+"ms");
     console.log(realSpeed+"ms");
+}
+
+function fadeCallback(target, newText) {
+    target.classList.remove("fadeout");
+
+    // set text
+    target.innerText = newText ? newText : _defaultMsg;
+
+    setAnim(target);
 
     // fade in
     target.style.setProperty("--transitionFadeInInit", "translate(0px,-"+_transitionFadePx+"px)");
@@ -361,7 +365,7 @@ function fadeCallback(target, newText) {
     window.setTimeout(function(){target.classList.remove("fadein")}, _transitionFadeMs);
 }
 
-function setTickerAnim(newText, playTransition) {
+function updateTicker(newText, playTransition) {
     
     let target = getTickerElem();
     if (_cleanChars) newText = filter.clean(newText);
@@ -389,35 +393,7 @@ function setTickerAnim(newText, playTransition) {
         // set text
         target.innerText = newText ? newText : _defaultMsg;
 
-        // set up the new x-offset target to scroll to
-        const xTargetOffset = getAnimXOffset();
-        target.style.setProperty("--left-translate", "translateX("+xTargetOffset+"px)");
-        console.log("translateX("+xTargetOffset+"px)");
-
-        // calculate time spent scrolling based on amount of text
-        let scrollSpeed = getScrollSpeed((xTargetOffset*-1) / _pixelsPerStep);
-
-        // remove scroll delay class
-        target.classList.remove(_curScrollDelay);
-
-        // set global scroll delay based on desired scroll time
-        _curScrollDelay = getScrollDelay(scrollSpeed);
-
-        // set the scroll delay class
-        const scrollClass = getScrollDelayClass(_curScrollDelay);
-        target.classList.add(scrollClass);
-        console.log("Set scroll delay class to: " + scrollClass);
-
-        // calculate real scroll time by factoring in scroll delay %'s
-        let realSpeed = calcRealTranslateTime(scrollSpeed);
-
-        // set global to be tracked by text update loop
-        _updateDelay = calcUpdateDelay(realSpeed);
-
-        console.log("Set updateDelay to "+_updateDelay);
-
-        target.style.setProperty("--scroll-speed", realSpeed+"ms");
-        console.log(realSpeed+"ms");
+        setAnim(target);
     }
 }
 
@@ -474,7 +450,7 @@ function processMsgQueue() {
             _scrolledOnce = false;
         }
 
-        setTickerAnim(_queue.dequeue().Message, true);
+        updateTicker(_queue.dequeue().Message, true);
 
         window.setTimeout(processMsgQueue, _updateDelay);
     }
@@ -500,9 +476,9 @@ function setup() {
         var _initialized = true;
 
         // setTickerAnim(_defaultMsg, false);
-        // Can't set the animation straight out away due to bug in Chrome
+        // Can't set the animation straight away due to bug in Chrome
         // Canvas reports incorrect text width if called too quickly on page load
-        window.setTimeout(setTickerAnim, 5, _defaultMsg, false);
+        window.setTimeout(updateTicker, 5, _defaultMsg, false);
         pollDiscord();
         processMsgQueue();
     }

@@ -42,7 +42,6 @@
         }
      }
 
-     /* TODO: Implement these */
      @keyframes scroll-left-delay-short {
         0%, 17%   { 
             -moz-transform: translateX(0%);
@@ -259,6 +258,7 @@
         <div id="controls">
             <textarea id="message" rows="3" cols="28" >Enter a message here to manually update the ticker.</textarea>
             <a class="btn" id="btnUpdate" href="#">Update</a>
+            <a class="btn" id="btnRecalcAnim" href="#">Recalculate Animation</a>
             <!-- <a class="btn" id="btnTickerFadeout" href="#">Fade out</a> -->
             <!-- <a class="btn" id="btnTickerFadein" href="#">Fade in</a> -->
         </div>
@@ -271,9 +271,14 @@
         document.getElementById("btnUpdate").addEventListener("click",
             function() {
                 let newMsg = document.getElementById("message").value;
-                setTickerAnim(newMsg, true);
+                updateTicker(newMsg, true);
             }
         );
+        // document.getElementById("btnRecalcAnim").addEventListener("click",
+        //     function() {
+        //         setAnim(getTickerElem());
+        //     }
+        // );
         // document.getElementById("btnTickerFadeout").addEventListener("click",
         //     function() {
         //         let txt = document.querySelector("#ticker-txt > p")
