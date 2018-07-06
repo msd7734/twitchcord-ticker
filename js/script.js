@@ -1,8 +1,8 @@
 // Global constants
 // These can be changed to tweak the animation
 const _aestheticOffset = 5;         // Default: 5
-const _maxScrollSpeedMs = 15000;    // Default: 11000, Try: 15000
-const _minScrollSpeedMs = 3000;     // Default: 4000, Try: 3000
+const _maxScrollSpeedMs = 20000;    // Default: 11000, Try: 15000
+const _minScrollSpeedMs = 4000;     // Default: 4000, Try: 3000
 const _scrollSpeedStepMs = 250;     // Default: 500, Try: 250
 const _pixelsPerStep = 50;         // Default: 100, Try: 50
 const _transitionFadePx = 10;       // Default: 10
@@ -34,6 +34,7 @@ var _curScrollDelay = SCROLL_DELAY_DEFAULT;
 
 var _queue = [];
 var _qLock = false;
+var _updateClock = null;
 var _updateDelay = _minScrollSpeedMs;
 var _prevDelay = _updateDelay;
 var _scrolledOnce = false;
@@ -105,13 +106,15 @@ function calcUpdateDelay(realScrollMs) {
     //  of how big it is compared to its container
 
     const txtWidth = getTickerTextWidth()
-    const tickerWidth = getTickerWidth()
+    const tickerWidth = document.getElementById("ticker-txt").getBoundingClientRect().width;
+
 
     if (tickerWidth > txtWidth) {
+        // Reduce delay for very short text items
         const min = _minUpdateTime;
         const max = _minScrollSpeedMs;
         const percent = (txtWidth / tickerWidth);
-        console.log("Reduce update delay by " + percent + "%");
+        // console.log("Reduce update delay by " + percent + "%");
 
         return min + ((max - min) * percent)
     }
@@ -122,13 +125,13 @@ function calcUpdateDelay(realScrollMs) {
         //  right before it transitions
         //  NOTE: The constant 1/5 is based on tweaking and could look bad if the percentages
         //          for the scroll delay change too drastically
-        const offsetStep = (_maxScrollSpeedMs - _minScrollSpeedMs) / 5;
+        const offsetStep = (_maxScrollSpeedMs - _minScrollSpeedMs) / 8;
         let offset = (function(step) {
             switch(_curScrollDelay) {
                 case SCROLL_DELAY_CLASS_SHORT:
-                    return step * 1.2;
-                case SCROLL_DELAY_CLASS_MED:
                     return step * 1.4;
+                case SCROLL_DELAY_CLASS_MED:
+                    return step * 1.2;
                 case SCROLL_DELAY_LONG:
                 default:
                     return step;
@@ -240,10 +243,18 @@ function getTickerTextWidth() {
     return Math.ceil(txtPixelWidth);
 }
 
+/*
+    Get the width of the ticker box itself. Note that this does NOT take into account
+    padding at the margins. See implementation in isTickerTextOverflow() to 
+    compensate for margins.
+*/
 function getTickerWidth() {
     return Math.ceil(document.getElementById("ticker").getBoundingClientRect().width);
 }
 
+/*
+    Get whether the text overflows the ticker viewport
+*/
 function isTickerTextOverflow() {
     let txtWidth = getTickerTextWidth();
     let tickerBoxWidth = document.getElementById("ticker-txt").getBoundingClientRect().width;
@@ -311,6 +322,7 @@ function getScrollSpeed(givenSize) {
     state of the page. Text should be updated before calling this function.
 */
 function setAnim(target) {
+
     // set up the new x-offset target to scroll to
     const xTargetOffset = getAnimXOffset();
     target.style.setProperty("--left-translate", "translateX("+xTargetOffset+"px)");
@@ -340,6 +352,9 @@ function setAnim(target) {
 
     target.style.setProperty("--scroll-speed", realSpeed+"ms");
     console.log(realSpeed+"ms");
+
+    window.clearTimeout(_updateClock);
+    _updateClock = window.setTimeout(processMsgQueue, _updateDelay);
 }
 
 function fadeCallback(target, newText) {
@@ -395,7 +410,7 @@ function handleResize() {
         window.requestAnimationFrame(
             function() {
                 setAnim(getTickerElem());
-                console.log("Reset animation due to window resize.");
+                // console.log("Reset animation due to window resize.");
                 _resizing = false;
             }
         )
@@ -413,6 +428,13 @@ Array.prototype.enqueue = function(item) {
 Array.prototype.dequeue = function() {
     return this.shift();
 }
+
+function fadeAnimHandler(e) {
+    if (e.animationName === "ticker-fadein") {
+        ticker.removeEventListener("animationend", fadeAnimHandler);
+        console.log("Fade-in complete, processing queue again in " + _updateDelay + " seconds");
+    }
+};
 
 function handleDiscordMessages(e) {
     let response = JSON.parse(e.target.response);
@@ -438,27 +460,14 @@ function pollDiscord() {
 }
 
 function processMsgQueue() {
+
     if (!_qLock && _queue.length > 0) {
-        if (_scrolledOnce) {
-            _scrolledOnce = false;
-        }
-
+        getTickerElem().addEventListener("animationend", fadeAnimHandler);
         updateTicker(_queue.dequeue().Message, true);
-
-        window.setTimeout(processMsgQueue, _updateDelay);
     }
     else {
-        if (!_scrolledOnce) {
-            window.setTimeout(
-                function() {
-                    _scrolledOnce = true;
-                    _updateDelay = _minScrollSpeedMs;
-                },
-                _updateDelay
-            );
-        }
-
-        window.setTimeout(processMsgQueue, _updateDelay);
+        window.clearTimeout(_updateClock);
+        _updateClock = window.setTimeout(processMsgQueue, _updateDelay);
     }
 }
 
@@ -473,7 +482,6 @@ function setup() {
         // Canvas reports incorrect text width if called too quickly on page load
         window.setTimeout(updateTicker, 5, _defaultMsg, false);
         pollDiscord();
-        processMsgQueue();
     }
     else {
         console.warn("Tried to set up ticker more than once (function call ignored)");
