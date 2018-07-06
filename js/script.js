@@ -114,9 +114,6 @@ function calcUpdateDelay(realScrollMs) {
         console.log("Reduce update delay by " + percent + "%");
 
         return min + ((max - min) * percent)
-
-        // for every 200 pixels of text width, decrease the min scroll time by 100ms
-        //return clamp(realScrollMs - ((textWidth / 200) * 100), _minUpdateTime, _minScrollSpeedMs);
     }
     else {
         // Don't try and pare down the time here, when the text scrolls
@@ -128,7 +125,6 @@ function calcUpdateDelay(realScrollMs) {
         const offsetStep = (_maxScrollSpeedMs - _minScrollSpeedMs) / 5;
         let offset = (function(step) {
             switch(_curScrollDelay) {
-                // Recheck the logic here... Should we multiply by 0.8 and 0.6 ...? 
                 case SCROLL_DELAY_CLASS_SHORT:
                     return step * 1.2;
                 case SCROLL_DELAY_CLASS_MED:
@@ -236,12 +232,6 @@ function getTickerTextWidth() {
     }
     let txt = tickerTxt.innerText;
 
-    // console.log(
-    //     getComputedStyle(tickerTxt).fontWeight + " " +
-    //     getComputedStyle(tickerTxt).fontSize + " " +
-    //     getComputedStyle(tickerTxt).fontFamily
-    // );
-
     let txtPixelWidth = getTextWidth(txt,
         getComputedStyle(tickerTxt).fontWeight + " " +
         getComputedStyle(tickerTxt).fontSize + " " +
@@ -335,7 +325,7 @@ function setAnim(target) {
     // set global scroll delay based on desired scroll time
     _curScrollDelay = getScrollDelay(scrollSpeed);
 
-    // set the scroll delay class
+    // set the scroll delay class based on the animation bookend delay time
     const scrollClass = getScrollDelayClass(_curScrollDelay);
     target.classList.add(scrollClass);
     console.log("Set scroll delay class to: " + scrollClass);
