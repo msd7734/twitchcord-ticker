@@ -22,7 +22,6 @@
         
         {
             "label": "publish",
-            "command": "dotnet",
             "type": "shell",
             "linux":{
                 "command": "echo Build not yet supported on Linux.",
