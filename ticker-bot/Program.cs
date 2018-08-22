@@ -28,8 +28,6 @@ namespace TwitchTicker
 
         private static String ReadToken() {
             string tokenPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "token");
-            Console.WriteLine(tokenPath);
-            Console.ReadKey();
             return File.ReadAllText(tokenPath).Trim();
         }
 
