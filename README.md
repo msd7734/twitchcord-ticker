@@ -12,5 +12,4 @@ This project has two portions, the webpage (ticker overlay) and the Discord bot.
 
 * The bot requires a Discord token to be placed in the /ticker-bot directory before building. Get a Discord bot token and paste it in a "token" file (no quotes, no file extension)
 * Build in VSCode using the scripts provided in /ticker-bot/script/win
-* Build scripts are not yet cross-platform, you would have to set up a build manually in *nix 
-* Some dependencies used are not built to target dotnetcore but are compatible. I could branch them and rebuild with dotnetcore as a target in the future
+* Build scripts are not yet cross-platform, you would have to set up a build manually in *nix
