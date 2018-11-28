@@ -238,11 +238,13 @@ function getTickerTextWidth() {
         return 0;
     }
     let txt = tickerTxt.innerText;
+    const compStyle = getComputedStyle(tickerTxt);
 
     let txtPixelWidth = getTextWidth(txt,
-        getComputedStyle(tickerTxt).fontWeight + " " +
-        getComputedStyle(tickerTxt).fontSize + " " +
-        getComputedStyle(tickerTxt).fontFamily);
+        compStyle.fontWeight + " " +
+        compStyle.fontSize + " " +
+        compStyle.fontFamily
+    );
 
     return Math.ceil(txtPixelWidth);
 }
