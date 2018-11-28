@@ -20,6 +20,9 @@ const _defaultMsg = "Welcome to the stream. Users in approved channels on Discor
 const _pollRateMs = 500;
 const _localPort = 9000;
 
+const _errsBeforeMsgDisplay = 3;
+const _errsMaxDisplayNumber = 10;
+
 const SCROLL_DELAY_DEFAULT = "scroll-left";
 const SCROLL_DELAY_SHORT = "scroll-left-delay-short";
 const SCROLL_DELAY_MED = "scroll-left-delay-medium";
@@ -38,6 +41,7 @@ var _updateClock = null;
 var _updateDelay = _minScrollSpeedMs;
 var _prevDelay = _updateDelay;
 var _scrolledOnce = false;
+var _botErrCount = 0;
 
 function clamp(n, min, max) {
     return Math.max(min, Math.min(n, max))
@@ -449,11 +453,24 @@ function handleDiscordMessages(e) {
         if (msgArrayRaw.length > 0)
             console.log(_queue.length + " message(s) now in queue");
     }
+
+    _botErrCount = 0;
+    document.getElementById("warning-msg").textContent = "";
+}
+
+function handleDiscordError(e) {
+    // increment successive error count
+    _botErrCount += 1;
+    if (_botErrCount >= _errsBeforeMsgDisplay) {
+        errCountMsg = (_botErrCount >= _errsMaxDisplayNumber) ?_errsMaxDisplayNumber+"+" : _botErrCount;
+        document.getElementById("warning-msg").textContent = "Cannot contact ticker bot after " + errCountMsg + " attempt(s)";
+    }
 }
 
 function pollDiscord() {
     let req = new XMLHttpRequest();
     req.addEventListener("load", handleDiscordMessages);
+    req.addEventListener("error", handleDiscordError);
     req.open("GET", "http://localhost:"+_localPort+"/queue/");
     req.send();
     window.setTimeout(pollDiscord, _pollRateMs);

@@ -20,16 +20,6 @@
             url('res/font/texgyreheros/texgyreheros-regular.otf');
     }
 
-    /* @-moz-keyframes scroll-left {
-        0%   { -moz-transform: translateX(100%); }
-        100% { -moz-transform: translateX(-100%); }
-    }
-
-    @-webkit-keyframes scroll-left {
-        0%   { -webkit-transform: translateX(100%); }
-        100% { -webkit-transform: var(--left-translate); }
-    } */
-
     /* see if there's a way to fiddle with the percentages in javascript as well... it won't be easy */
     @keyframes scroll-left {
         0%, 30%   { 
@@ -167,11 +157,18 @@
         color: whitesmoke;
         font-family: Arial, sans-serif;
         font-weight: bold;
-        display: table;
+        display: table;        
     }
 
-    #controls a {
+    #controls .controls-cell {
+        padding: 15px 15px 15px 15px;
         display: table-cell;
+        vertical-align: middle;
+    }
+
+    #warning-msg {
+        color: darkred;
+        font-size: 2em;
     }
 
     #ticker {
@@ -259,8 +256,9 @@
             </div>
         </div>
         <div id="controls">
-            <textarea id="message" rows="3" cols="28" >Enter a message here to manually update the ticker.</textarea>
-            <a class="btn" id="btnUpdate" href="#">Update</a>
+            <textarea class="controls-cells" id="message" rows="3" cols="28" >Enter a message here to manually update the ticker.</textarea>
+            <a class="btn controls-cell" id="btnUpdate" href="#">Update</a>
+            <span class="controls-cell" id="warning-msg" />
             <!-- <a class="btn" id="btnRecalcAnim" href="#">Recalculate Animation</a> -->
             <!-- <a class="btn" id="btnTickerFadeout" href="#">Fade out</a> -->
             <!-- <a class="btn" id="btnTickerFadein" href="#">Fade in</a> -->
