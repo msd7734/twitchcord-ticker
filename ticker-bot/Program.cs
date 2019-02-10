@@ -20,40 +20,93 @@ namespace TwitchTicker
 {
     public class Program
     {
-        private readonly static String _TOKEN = ReadToken();
-        private readonly static String _PREFIX = "!m ";
+        private readonly static string _TOKEN = ReadToken();
+        private readonly static string _PREFIX = "!m ";
 
         private static Queue _msgQueue;
         private static object _lock = new object();
 
-        private static String ReadToken() {
+        private static string ReadToken() {
             string tokenPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "token");
             return File.ReadAllText(tokenPath).Trim();
+        }
+
+        private static string PromptAndStoreToken() {
+            Console.Write("The Discord bot token needs to be stored. Enter the token: ");
+            string token = Console.ReadLine();
+
+            Console.WriteLine(
+                Environment.NewLine + 
+                "The token will be stored encrypted. You may choose to a use a password to encrypt it. " + 
+                "If you don't use a password, a default encryption scheme will be used (this is less secure). " +
+                Environment.NewLine
+            );
+            
+            Console.Write("Use a password? (y/n) ");
+            string yesno = Console.ReadLine();
+
+            bool usePassword = (yesno.Length > 0 && yesno.Substring(0,1).ToLower() == "y");
+
+            string password = String.Empty;
+            if (usePassword) {
+                do {
+                    Console.Write("Enter your password: ");
+                    password = Console.ReadLine();
+                } while (password.Length < 1);
+                
+                Console.WriteLine("WARNING: If you forget your password you will have to delete the token file and re-encrypt the token.");
+            }
+            else {
+                Console.WriteLine("Using default encryption.");
+            }
+
+            BotToken.WriteToken(token, password);
+            return BotToken.GetTokenString();
+        }
+
+        private static string ReadToken() {
+            Console.WriteLine("Found token file")
+
+            return "";
         }
 
         public static void Main(string[] args)
             => new Program().MainAsync().GetAwaiter().GetResult();
 
         public async Task MainAsync() {
-            if (String.IsNullOrWhiteSpace(_TOKEN)) {
-                Console.Error.WriteLine("Discord token empty or not found. The bot is unable to connect.");
-                await Task.CompletedTask;
+            
+
+            BotTokenState tokenState = BotToken.CheckTokenState();
+            string token = String.Empty;
+            switch(tokenState) {
+                case BotTokenState.Valid:
+                    Console.WriteLine("Successfully read Discord bot token.");
+                    //token = ReadToken();
+                    break;
+                case BotTokenState.Missing:
+                case BotTokenState.Outdated:
+                case BotTokenState.Corrupted:
+                    token = PromptAndStoreToken();
+                    break;
             }
 
-            var client = new DiscordSocketClient();
-            client.Log += Log;
-            client.MessageReceived += MessageReceived;
-            
-            Server watsonLocal = new Server("localhost", 9000, false, DefaultRoute, false);
-            watsonLocal.AddStaticRoute("get", "/hello/", HelloRoute);
-            watsonLocal.AddStaticRoute("get", "/queue/", QueueRoute);
-            
-            _msgQueue = new Queue();
+            Console.WriteLine($"Using token {token}");
+            return;
 
-            await client.LoginAsync(TokenType.Bot, _TOKEN);
-            await client.StartAsync();
+            // var client = new DiscordSocketClient();
+            // client.Log += Log;
+            // client.MessageReceived += MessageReceived;
+            
+            // Server watsonLocal = new Server("localhost", 9000, false, DefaultRoute, false);
+            // watsonLocal.AddStaticRoute("get", "/hello/", HelloRoute);
+            // watsonLocal.AddStaticRoute("get", "/queue/", QueueRoute);
+            
+            // _msgQueue = new Queue();
 
-            await Task.Delay(-1);
+            // await client.LoginAsync(TokenType.Bot, _TOKEN);
+            // await client.StartAsync();
+
+            // await Task.Delay(-1);
         }
 
         private Task Log(LogMessage msg) {
