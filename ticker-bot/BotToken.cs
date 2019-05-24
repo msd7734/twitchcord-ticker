@@ -12,6 +12,8 @@ namespace TwitchTicker {
         private readonly static int _DATASIZE = 120;
 
         private static BotToken _instance = null;
+        private static Crypto _crypto = null;
+        private static BotToken _missingToken = new BotToken(new byte[0], 0, 0, new byte[0], BotTokenState.Missing);
         private static BotToken _badToken = new BotToken(new byte[0], 0, 0, new byte[0], BotTokenState.Corrupted);
 
         private byte[] _fileHeader;
@@ -20,7 +22,7 @@ namespace TwitchTicker {
         private byte[] _data;
         private BotTokenState _state;
 
-        private BotToken(byte[] header, byte flags, uint checksum, byte[] data, BotTokenState state = BotTokenState.Unchecked) {
+        private BotToken(byte[] header, byte flags, uint checksum, byte[] data, BotTokenState state) {
             _fileHeader = header;
             _flags = flags;
             _checksum = checksum;
@@ -28,10 +30,10 @@ namespace TwitchTicker {
             _state = state;
         }
 
-        public static void WriteToken(string tokenStr, string password = "") {
+        public static void WriteToken(string tokenStr, string password = "") {            
             bool noPassword = (password == String.Empty);
             
-            var crypto = Crypto.Init();
+            var crypto = _crypto ?? Crypto.Init();
             byte[] encrToken;
 
             if (noPassword) {
@@ -69,7 +71,8 @@ namespace TwitchTicker {
 
         public static void ReadToken() {
             if (!File.Exists(_FILENAME)) {
-                throw new BotTokenException("Bot token file not found");
+                _instance = _missingToken;
+                return; 
             }
 
             using (var fs = File.OpenRead(_FILENAME)) {
@@ -78,15 +81,19 @@ namespace TwitchTicker {
                     try {
                         byte[] fileHeader = reader.ReadBytes(_HEADER.Length);
 
+                        if (!VerifyHeader(fileHeader)) {
+                            _instance = _badToken;
+                            return;
+                        }
+
                         byte flags = reader.ReadByte();
 
                         uint checksum = reader.ReadUInt32();
 
                         long dataSize = reader.BaseStream.Length - reader.BaseStream.Position;
-                        
                         byte[] data = reader.ReadBytes(Convert.ToInt32(dataSize));
 
-                        _instance = new BotToken(fileHeader, flags, checksum, data);
+                        _instance = new BotToken(fileHeader, flags, checksum, data, BotTokenState.Unchecked);
                     }
                     catch (ArgumentException) {
                         // If we got here, we overran the EOF which means the file is considered corrupted
@@ -100,12 +107,43 @@ namespace TwitchTicker {
             }
         }
 
+        public static bool DecryptAndVerify(string password = "") {
+            if (_instance == null) {
+                throw new InvalidOperationException("BotToken not initialized");
+            }
+            else if (!(_instance._state == BotTokenState.Valid || _instance._state == BotTokenState.Unchecked)) {
+                throw new InvalidOperationException($"BotToken is not valid (state: {_instance._state.ToString()})");
+            }
+
+            Crypto crypto = _crypto ?? Crypto.Init();
+
+            byte[] decrypted;
+            if (password == String.Empty) {
+                decrypted = crypto.Decrypt(_instance._data);
+            }
+            else {
+                decrypted = crypto.Decrypt(_instance._data, password);
+            }
+
+            if (crypto.Checksum != _instance._checksum) {
+                return false;
+            }
+
+            _instance._data = decrypted;
+            _instance._state = BotTokenState.Valid;
+
+            return true;
+        }
+
         public static string GetTokenString() {
             if (_instance == null) {
                 throw new InvalidOperationException("BotToken not initialized");
             }
-            else if (_instance._state != BotTokenState.Valid) {
+            else if (!(_instance._state == BotTokenState.Valid || _instance._state == BotTokenState.Unchecked)) {
                 throw new InvalidOperationException($"BotToken is not valid (state: {_instance._state.ToString()})");
+            }
+            else if (_instance._state == BotTokenState.Unchecked) {
+                throw new InvalidOperationException("Accessing encrypted token string.");
             }
 
             return Encoding.ASCII.GetString(_instance._data);
@@ -115,42 +153,36 @@ namespace TwitchTicker {
             if (_instance == null) {
                 throw new InvalidOperationException("BotToken not initialized");
             }
-            else if (_instance._state != BotTokenState.Valid) {
+            else if (!(_instance._state == BotTokenState.Valid || _instance._state == BotTokenState.Unchecked)) {
                 throw new InvalidOperationException($"BotToken is not valid (state: {_instance._state.ToString()})");
             }
-            
+
             return ((BotTokenFlags)_instance._flags & BotTokenFlags.UsePassword) != 0;
+        }
+
+        public static BotTokenState GetTokenState() {
+            if (_instance == null) {
+                throw new InvalidOperationException("BotToken not initialized");
+            }
+            return _instance._state;
         }
 
         public static bool Exists() {
             return File.Exists(_FILENAME);
         }
 
-        public static BotTokenState CheckTokenState() {
-            if (File.Exists(_FILENAME)) {
-                var fileInfo = new FileInfo(_FILENAME);
-                if (fileInfo.Length != _FILESIZE) {
-                    return BotTokenState.Corrupted;
+        private static bool VerifyHeader(byte[] readHeader) {
+            if (readHeader.Length != _HEADER.Length) {
+                return false;
+            }
+
+            for (int i = 0; i < _HEADER.Length; ++i) {
+                if (readHeader[i] != _HEADER[i]) {
+                    return false;
                 }
-                byte[] contents = File.ReadAllBytes(_FILENAME);
-                return verifyFileContents(contents);
-            }
-            else {
-                File.Create(_FILENAME).Close();
-                return BotTokenState.Missing;
-            }
-        }
-        
-        private static BotTokenState verifyFileContents(byte[] contents) {
-            if (contents.Length != _FILESIZE) {
-                return BotTokenState.Corrupted;
             }
 
-            return BotTokenState.Valid;
-        }
-
-        private static uint calcChecksum(byte[] data) {
-            return 0;
+            return true;
         }
     }
 }

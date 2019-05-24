@@ -64,9 +64,39 @@ namespace TwitchTicker
             return BotToken.GetTokenString();
         }
 
-        private static string ReadToken() {
-            Console.WriteLine("Found token file")
+        public static string HandleTokenDecrypt() {
+            if (BotToken.UsingPassword()) {
+                bool retry = true;
+                while (retry) {
+                    Console.Write("Enter your password: ");
+                    string password = Console.ReadLine();
+                    // TODO: Handle CryptographicException - it's thrown on a "bad" decrypt which will happen if the password is wrong
+                    // ALSO: Should just handle that in general, because we can easily just ask to re-enter the token if it gets messed up elsewhere
+                    bool verified = BotToken.DecryptAndVerify(password);
+                    if (!verified) {
+                        Console.Write("Could not decrypt token with that password. Try again? (y/n) ");
+                        string yesno = Console.ReadLine();
+                        retry = (yesno.Length > 0 && yesno.Substring(0,1).ToLower() == "y");
+                    }
+                    else {
+                        Console.WriteLine("Token decrypted.");
+                        return BotToken.GetTokenString();
+                    }
+                }
+            }
+            else {
+                bool verified = BotToken.DecryptAndVerify();
+                if (!verified) {
+                    Console.WriteLine("Unable to decrypt bot token (it may be corrupt).");
+                    return PromptAndStoreToken();
+                }
+                else {
+                    Console.WriteLine("Token decrypted.");
+                    return BotToken.GetTokenString();
+                }
+            }
 
+            // Couldn't get a token
             return "";
         }
 
@@ -75,12 +105,14 @@ namespace TwitchTicker
 
         public async Task MainAsync() {
             
-
-            BotTokenState tokenState = BotToken.CheckTokenState();
+            BotToken.ReadToken();
+            
             string token = String.Empty;
-            switch(tokenState) {
+            switch(BotToken.GetTokenState()) {
+                case BotTokenState.Unchecked:
                 case BotTokenState.Valid:
                     Console.WriteLine("Successfully read Discord bot token.");
+                    token = HandleTokenDecrypt();
                     //token = ReadToken();
                     break;
                 case BotTokenState.Missing:
@@ -90,7 +122,13 @@ namespace TwitchTicker
                     break;
             }
 
+            if (token == String.Empty) {
+                Console.WriteLine("Stopping.");
+                return;
+            }
+
             Console.WriteLine($"Using token {token}");
+            Console.ReadKey();
             return;
 
             // var client = new DiscordSocketClient();

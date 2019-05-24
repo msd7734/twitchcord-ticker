@@ -70,6 +70,8 @@ namespace TwitchTicker {
         }
 
         private byte[] ExecEncrypt(byte[] pt, byte[] iv, byte[] k, CipherMode mode) {
+            byte[] encrBytes;
+
             using (var aes = new AesManaged()) {
                 aes.IV = iv;
                 aes.Key = k;
@@ -78,30 +80,35 @@ namespace TwitchTicker {
                 ICryptoTransform encryptor = aes.CreateEncryptor();
                 using (var ms = new MemoryStream()) {
                     using (var cs = new CryptoStream(ms, encryptor, CryptoStreamMode.Write)) {
-                        using (var writer = new StreamWriter(cs)) {
-                            writer.Write(pt);
-                        }
-                        return ms.ToArray();
+                        cs.Write(pt, 0, pt.Length);
+                        cs.FlushFinalBlock();
+
+                        encrBytes = ms.ToArray();
                     }
                 }
             }
+
+            return encrBytes;
         }
 
-        private byte[] ExecDecrypt(byte[] pt, byte[] iv, byte[] k, CipherMode mode) {
+        private byte[] ExecDecrypt(byte[] ct, byte[] iv, byte[] k, CipherMode mode) {
+            byte[] pt = new byte[ct.Length];
+            
             using (var aes = new AesManaged()) {
                 aes.IV = iv;
                 aes.Key = k;
                 aes.Mode = mode;
 
                 ICryptoTransform decryptor = aes.CreateDecryptor();
-                using (var ms = new MemoryStream()) {
+                using (var ms = new MemoryStream(ct)) {
                     using (var cs = new CryptoStream(ms, decryptor, CryptoStreamMode.Read)) {
-                        using (var reader = new StreamReader(cs)) {
-                            return Encoding.ASCII.GetBytes(reader.ReadToEnd());
-                        }
+                        int bytesRead = cs.Read(pt, 0, ct.Length);
+                        Array.Resize(ref pt, bytesRead);
                     }
                 }
             }
+
+            return pt;
         }
 
         private void SetChecksum(byte[] source, byte[] salt) {
@@ -110,8 +117,12 @@ namespace TwitchTicker {
             Array.Copy(source, merged, source.Length);
             Array.Copy(salt, 0, merged, source.Length, salt.Length);
 
+            this.Checksum = CalcChecksum(merged);
+        }
+
+        private uint CalcChecksum(byte[] data) {
             SHA1 sha = new SHA1Managed();
-            byte[] hash = sha.ComputeHash(merged);
+            byte[] hash = sha.ComputeHash(data);
 
             int padSize = sizeof(uint);
             if (hash.Length % padSize != 0) {
@@ -127,7 +138,7 @@ namespace TwitchTicker {
                 }
             }
 
-            this.Checksum = checksum;
+            return checksum;
         }
 
         private static byte[] DeriveIV(byte[] source) {
@@ -138,6 +149,8 @@ namespace TwitchTicker {
                 Array.Resize(ref src, _IV_SIZE);
             }
 
+            // Something dumb is going on here... Try and remember why I did this.
+            // If there's no reason, delete it.
             byte[] iv = new byte[_IV_SIZE];
             Array.Copy(src, iv, _IV_SIZE);
 
