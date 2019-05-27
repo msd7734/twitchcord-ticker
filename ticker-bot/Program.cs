@@ -20,16 +20,10 @@ namespace TwitchTicker
 {
     public class Program
     {
-        private readonly static string _TOKEN = ReadToken();
         private readonly static string _PREFIX = "!m ";
 
         private static Queue _msgQueue;
         private static object _lock = new object();
-
-        private static string ReadToken() {
-            string tokenPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "token");
-            return File.ReadAllText(tokenPath).Trim();
-        }
 
         private static string PromptAndStoreToken() {
             Console.Write("The Discord bot token needs to be stored. Enter the token: ");
@@ -81,7 +75,7 @@ namespace TwitchTicker
                         return BotToken.GetTokenString();
                     }
                 }
-                // Decided to stop retrying
+                // User decided to stop retrying
                 string pathToTokenFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "token").ToString();
                 Console.WriteLine($"Store a new token by deleting the token file at {pathToTokenFile}");
             }
@@ -129,24 +123,20 @@ namespace TwitchTicker
                 return;
             }
 
-            Console.WriteLine($"Using token {token}");
-            Console.ReadKey();
-            return;
-
-            // var client = new DiscordSocketClient();
-            // client.Log += Log;
-            // client.MessageReceived += MessageReceived;
+            var client = new DiscordSocketClient();
+            client.Log += Log;
+            client.MessageReceived += MessageReceived;
             
-            // Server watsonLocal = new Server("localhost", 9000, false, DefaultRoute, false);
-            // watsonLocal.AddStaticRoute("get", "/hello/", HelloRoute);
-            // watsonLocal.AddStaticRoute("get", "/queue/", QueueRoute);
+            Server watsonLocal = new Server("localhost", 9000, false, DefaultRoute, false);
+            watsonLocal.AddStaticRoute("get", "/hello/", HelloRoute);
+            watsonLocal.AddStaticRoute("get", "/queue/", QueueRoute);
             
-            // _msgQueue = new Queue();
+            _msgQueue = new Queue();
 
-            // await client.LoginAsync(TokenType.Bot, _TOKEN);
-            // await client.StartAsync();
+            await client.LoginAsync(TokenType.Bot, token);
+            await client.StartAsync();
 
-            // await Task.Delay(-1);
+            await Task.Delay(-1);
         }
 
         private Task Log(LogMessage msg) {
