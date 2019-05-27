@@ -65,7 +65,11 @@ namespace TwitchTicker
                     Console.Write("Enter your password: ");
                     string password = Console.ReadLine();
                     bool verified = BotToken.DecryptAndVerify(password);
-                    if (!verified) {
+                    if (BotToken.GetTokenState() == BotTokenState.Corrupted) {
+                        Console.WriteLine("Checksum mismatch. (New bot version or corrupted file)");
+                        return PromptAndStoreToken();
+                    }
+                    else if (!verified) {
                         Console.Write("Could not decrypt token with that password. Try again? (y/n) ");
                         string yesno = Console.ReadLine();
                         retry = (yesno.Length > 0 && yesno.Substring(0,1).ToLower() == "y");
@@ -82,7 +86,7 @@ namespace TwitchTicker
             else {
                 bool verified = BotToken.DecryptAndVerify();
                 if (!verified) {
-                    Console.WriteLine("Unable to decrypt bot token (it may be corrupt).");
+                    Console.WriteLine("Checksum mismatch. (New bot version or corrupted file)");
                     return PromptAndStoreToken();
                 }
                 else {

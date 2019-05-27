@@ -127,6 +127,7 @@ namespace TwitchTicker {
                 }
 
                 if (crypto.Checksum != _instance._checksum) {
+                    _instance = _badToken;
                     return false;
                 }
 
