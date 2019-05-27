@@ -117,22 +117,29 @@ namespace TwitchTicker {
 
             Crypto crypto = _crypto ?? Crypto.Init();
 
-            byte[] decrypted;
-            if (password == String.Empty) {
-                decrypted = crypto.Decrypt(_instance._data);
-            }
-            else {
-                decrypted = crypto.Decrypt(_instance._data, password);
-            }
+            try {
+                byte[] decrypted;
+                if (password == String.Empty) {
+                    decrypted = crypto.Decrypt(_instance._data);
+                }
+                else {
+                    decrypted = crypto.Decrypt(_instance._data, password);
+                }
 
-            if (crypto.Checksum != _instance._checksum) {
+                if (crypto.Checksum != _instance._checksum) {
+                    return false;
+                }
+
+                _instance._data = decrypted;
+                _instance._state = BotTokenState.Valid;
+
+                return true;
+            }
+            catch (CryptographicException) {
+                // If the password is wrong or some corruption prevents even being able to decrypt,
                 return false;
             }
-
-            _instance._data = decrypted;
-            _instance._state = BotTokenState.Valid;
-
-            return true;
+            
         }
 
         public static string GetTokenString() {

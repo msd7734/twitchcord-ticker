@@ -70,8 +70,6 @@ namespace TwitchTicker
                 while (retry) {
                     Console.Write("Enter your password: ");
                     string password = Console.ReadLine();
-                    // TODO: Handle CryptographicException - it's thrown on a "bad" decrypt which will happen if the password is wrong
-                    // ALSO: Should just handle that in general, because we can easily just ask to re-enter the token if it gets messed up elsewhere
                     bool verified = BotToken.DecryptAndVerify(password);
                     if (!verified) {
                         Console.Write("Could not decrypt token with that password. Try again? (y/n) ");
@@ -83,6 +81,9 @@ namespace TwitchTicker
                         return BotToken.GetTokenString();
                     }
                 }
+                // Decided to stop retrying
+                string pathToTokenFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "token").ToString();
+                Console.WriteLine($"Store a new token by deleting the token file at {pathToTokenFile}");
             }
             else {
                 bool verified = BotToken.DecryptAndVerify();
@@ -123,7 +124,8 @@ namespace TwitchTicker
             }
 
             if (token == String.Empty) {
-                Console.WriteLine("Stopping.");
+                Console.WriteLine("Stopping. (Press any key to end)");
+                Console.ReadKey();
                 return;
             }
 
