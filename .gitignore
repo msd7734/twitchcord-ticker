@@ -7,7 +7,7 @@ ticker-bot/notes.txt
 **token
 
 # VS Code
-ticker-bot/.vscode/*
+**/.vscode/*
 
 # Non-generic builds
 **.offline.*
