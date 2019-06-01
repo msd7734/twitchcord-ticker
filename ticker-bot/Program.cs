@@ -25,6 +25,17 @@ namespace TwitchTicker
         private static Queue _msgQueue;
         private static object _lock = new object();
 
+        private static ArgDef[] _argDefs = new ArgDef[] {
+            new ArgDefFlag("encrypt-only", "e"),
+            new ArgDefKeyValue("password", "p"),
+            new ArgDefKeyValue("token", "t")
+        };
+
+        private static string StoreToken(string token, string password) {
+            BotToken.WriteToken(token, password);
+            return BotToken.GetTokenString();
+        }
+
         private static string PromptAndStoreToken() {
             Console.Write("The Discord bot token needs to be stored. Enter the token: ");
             string token = Console.ReadLine();
@@ -100,26 +111,66 @@ namespace TwitchTicker
         }
 
         public static void Main(string[] args)
-            => new Program().MainAsync().GetAwaiter().GetResult();
+            => new Program().MainAsync(args).GetAwaiter().GetResult();
 
-        public async Task MainAsync() {
+        public async Task MainAsync(string[] cmdArgs) {
             
-            BotToken.ReadToken();
+            ArgParse args = new ArgParse();
+            args.AddDefs(_argDefs);
+            args.Parse(cmdArgs);
             
+            bool encryptOnlyMode = args.GetFlag("encrypt-only");
+            string givenPassword = args.GetValue("password");
+            string givenToken = args.GetValue("token");
+
             string token = String.Empty;
-            switch(BotToken.GetTokenState()) {
-                case BotTokenState.Unchecked:
-                case BotTokenState.Valid:
-                    Console.WriteLine("Successfully read Discord bot token.");
-                    token = HandleTokenDecrypt();
-                    //token = ReadToken();
-                    break;
-                case BotTokenState.Missing:
-                case BotTokenState.Outdated:
-                case BotTokenState.Corrupted:
-                    token = PromptAndStoreToken();
-                    break;
+
+            if (encryptOnlyMode) {
+                Console.WriteLine("Encrypt-only mode.");
+                if (givenToken != String.Empty) {
+                    if (givenPassword != String.Empty) {
+                        Console.WriteLine("Using password.");
+                    }
+                    else {
+                        Console.WriteLine("Not using password.");
+                    }
+                    StoreToken(givenToken, givenPassword);
+                    Console.WriteLine("Token stored successfully.");
+                }
+                else {
+                    Console.WriteLine("Encrypt-only mode can only be used with a token. Run with option --token <string>.");
+                }
+                return;
             }
+            else if (givenToken != String.Empty) {
+                Console.WriteLine("Storing token.");
+                if (givenPassword != String.Empty) {
+                    Console.WriteLine("Using password.");
+                }
+                else {
+                    Console.WriteLine("Not using password.");
+                }
+                StoreToken(givenToken, givenPassword);
+                token = givenToken;
+            }
+            else {
+                // Handle user-mode
+                BotToken.ReadToken();
+                switch(BotToken.GetTokenState()) {
+                    case BotTokenState.Unchecked:
+                    case BotTokenState.Valid:
+                        Console.WriteLine("Loading Discord bot token.");
+                        token = HandleTokenDecrypt();
+                        break;
+                    case BotTokenState.Missing:
+                    case BotTokenState.Outdated:
+                    case BotTokenState.Corrupted:
+                        token = PromptAndStoreToken();
+                        break;
+                }
+            }
+            
+           
 
             if (token == String.Empty) {
                 Console.WriteLine("Stopping. (Press any key to end)");
@@ -156,7 +207,9 @@ namespace TwitchTicker
                     content = content.Substring(plen, content.Length - plen);
                     _msgQueue.Enqueue(new DiscordMessage(msg.Author.Id, content));
                 }
-                Console.WriteLine("--> SERVER: Queued Discord message");
+                string user = msg.Author.Username;
+                string discrim = msg.Author.Discriminator;
+                Console.WriteLine($"--> SERVER: Queued Discord message (from {user}#{discrim})");
             }
 
             return Task.CompletedTask;
