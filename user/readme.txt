@@ -1,0 +1,1 @@
+These are settings files for the Discord bot. They are only loaded once when the bot is started, and settings are saved when the bot is shut down.

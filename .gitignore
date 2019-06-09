@@ -13,5 +13,5 @@ ticker-bot/notes.txt
 **.offline.*
 
 # Settings
-**/user
-!/user/readme.txt
+user/*
+!user/readme.txt
