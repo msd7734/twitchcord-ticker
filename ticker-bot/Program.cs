@@ -5,8 +5,10 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Collections;
+using System.Collections.Generic;
 using System.Text;
 using System.IO;
+using System.Linq;
 
 using WatsonWebserver;
 
@@ -20,16 +22,21 @@ namespace TwitchTicker
 {
     public class Program
     {
-        private readonly static string _PREFIX = "!m ";
+        private readonly static string _MSG_PREFIX = "!m ";
+        private readonly static string _ADMIN_PREFIX = "!a ";
 
         private static Queue _msgQueue;
         private static object _lock = new object();
 
-        private static ArgDef[] _argDefs = new ArgDef[] {
+        private readonly static ArgDef[] _ARG_DEFS = new ArgDef[] {
             new ArgDefFlag("encrypt-only", "e"),
             new ArgDefKeyValue("password", "p"),
             new ArgDefKeyValue("token", "t")
         };
+
+        private static AdminList _adminList;
+
+        private static List<IDisposable> _disposables;
 
         private static string StoreToken(string token, string password) {
             BotToken.WriteToken(token, password);
@@ -111,12 +118,14 @@ namespace TwitchTicker
         }
 
         public static void Main(string[] args)
-            => new Program().MainAsync(args).GetAwaiter().GetResult();
+            => new Program().MainAsync(args).ContinueWith(task => CleanUp()).GetAwaiter().GetResult();
 
         public async Task MainAsync(string[] cmdArgs) {
-            
+            // List of items to clean up when the bot exits
+            _disposables = new List<IDisposable>();
+
             ArgParse args = new ArgParse();
-            args.AddDefs(_argDefs);
+            args.AddDefs(_ARG_DEFS);
             args.Parse(cmdArgs);
             
             bool encryptOnlyMode = args.GetFlag("encrypt-only");
@@ -138,7 +147,7 @@ namespace TwitchTicker
                     Console.WriteLine("Token stored successfully.");
                 }
                 else {
-                    Console.WriteLine("Encrypt-only mode can only be used with a token. Run with option --token <string>.");
+                    Console.WriteLine("Encrypt-only mode must be used with a token. Run with option --token <string>.");
                 }
                 return;
             }
@@ -169,8 +178,6 @@ namespace TwitchTicker
                         break;
                 }
             }
-            
-           
 
             if (token == String.Empty) {
                 Console.WriteLine("Stopping. (Press any key to end)");
@@ -178,9 +185,16 @@ namespace TwitchTicker
                 return;
             }
 
-            var client = new DiscordSocketClient();
+            var config = new DiscordSocketConfig();
+            config.AlwaysDownloadUsers = true;
+
+            var client = new DiscordSocketClient(config);
             client.Log += Log;
+            client.Ready += Ready;
             client.MessageReceived += MessageReceived;
+
+            _adminList = new AdminList(client);
+            _disposables.Add(_adminList);
             
             Server watsonLocal = new Server("localhost", 9000, false, DefaultRoute, false);
             watsonLocal.AddStaticRoute("get", "/hello/", HelloRoute);
@@ -189,6 +203,7 @@ namespace TwitchTicker
             _msgQueue = new Queue();
 
             await client.LoginAsync(TokenType.Bot, token);
+
             await client.StartAsync();
 
             await Task.Delay(-1);
@@ -199,17 +214,77 @@ namespace TwitchTicker
             return Task.CompletedTask;
         }
 
+        private Task Ready() {
+            return _adminList.LoadAdminsAsync()
+                             .ContinueWith(task => Console.WriteLine(_adminList.Message));
+        }
+
         private Task MessageReceived(SocketMessage msg) {
-            if (msg.Content.StartsWith(_PREFIX)) {
+            if (msg.Content.StartsWith(_MSG_PREFIX)) {
                 lock(_lock) {
                     String content = msg.Content;
-                    int plen = _PREFIX.Length;
+                    int plen = _MSG_PREFIX.Length;
                     content = content.Substring(plen, content.Length - plen);
                     _msgQueue.Enqueue(new DiscordMessage(msg.Author.Id, content));
                 }
                 string user = msg.Author.Username;
                 string discrim = msg.Author.Discriminator;
                 Console.WriteLine($"--> SERVER: Queued Discord message (from {user}#{discrim})");
+            }
+            else if (msg.Content.StartsWith(_ADMIN_PREFIX)) {
+                string friendlyName = DiscordUtil.GetUniqueName(msg.Author);
+                if (!_adminList.IsAdmin(msg.Author)) {
+                    Console.WriteLine($"--> SERVER: Requested admin command but was rejected ({friendlyName})");
+                    return Task.CompletedTask;
+                }
+
+                String content = msg.Content;
+                int plen = _ADMIN_PREFIX.Length;
+                content = content.Substring(plen, content.Length - plen);
+                string[] tokens = content.Split(" ");
+                if (tokens.Length > 1) {
+                    if (tokens[0] == "list" && tokens[1] == "admins") {
+                        string adminStr = String.Join(", ", _adminList.GetAdmins());
+                        Console.WriteLine($"--> SERVER: Requested admins ({friendlyName})");
+                        Console.WriteLine($"--> SERVER: {adminStr}");
+                        msg.Channel.SendMessageAsync($"Current users with admin permissions are: {adminStr}");
+                    }
+                    else if (tokens[0] == "add" && tokens[1] == "admin") {
+                        var user = msg.MentionedUsers.FirstOrDefault();
+                        if (user == null) {
+                            Console.WriteLine("--> SERVER: Unknown user.");
+                            return Task.CompletedTask;
+                        }
+                        bool success = _adminList.AddAdmin(user);
+                        Console.WriteLine($"--> SERVER: Giving admin to {friendlyName}");
+                        Console.WriteLine($"--> SERVER: {_adminList.Message}");
+                        if (success) {
+                            msg.Channel.SendMessageAsync($"I've added {friendlyName} as an admin.");                        
+                        }
+                        else {
+                            msg.Channel.SendMessageAsync($"I couldn't add that user as an admin: {_adminList.Message}");
+                        }
+                    }
+                    else if (tokens[0] == "remove" && tokens[1] == "admin") {
+                        var user = msg.MentionedUsers.FirstOrDefault();
+                        if (user == null) {
+                            Console.WriteLine("--> SERVER: Unknown user.");
+                            return Task.CompletedTask;
+                        }
+                        bool success = _adminList.RemoveAdmin(user);
+                        Console.WriteLine($"--> SERVER: Revoking admin from {friendlyName}");
+                        Console.WriteLine($"--> SERVER: {_adminList.Message}");
+                        if (success) {
+                            msg.Channel.SendMessageAsync($"I've removed {friendlyName} as an admin.");
+                        }
+                        else {
+                            msg.Channel.SendMessageAsync($"I couldn't remove that user as an admin: {_adminList.Message}");
+                        }
+                    }
+                }
+                else {
+                    Console.WriteLine("--> SERVER: Unknown admin command received.");
+                }
             }
 
             return Task.CompletedTask;
@@ -238,6 +313,15 @@ namespace TwitchTicker
             // constructor can accept any type and it will just call Json.Serialize on it
             byte[] data = Encoding.UTF8.GetBytes(ja.ToString());
             return new HttpResponse(r, true, 200, null, "text/plain", ja, false);
+        }
+
+        // TODO: Actually capturing a console application close in a dotnet core-friendly way is 
+        //  one of the most complex problems in all of computing, apparently.
+        //  Reference: https://github.com/dotnet/coreclr/issues/8565#issuecomment-435698397
+        private static void CleanUp() {
+            foreach (var d in _disposables) {
+                d.Dispose();
+            }
         }
     }
 
