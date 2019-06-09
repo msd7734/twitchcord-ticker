@@ -11,3 +11,7 @@ ticker-bot/notes.txt
 
 # Non-generic builds
 **.offline.*
+
+# Settings
+**/user
+!/user/readme.txt
